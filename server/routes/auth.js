@@ -73,50 +73,38 @@ router.get("/google/add-account", (req, res, next) => {
 });
 
 // ✅ FIXED: Add Account Callback
-router.get(
-  "/google/add-account/callback",
-  (req, res, next) => {
-    if (!isGoogleOAuthConfigured()) {
-      return res.status(503).json({ message: "Google OAuth not configured" });
-    }
-    next();
-  },
-  passport.authenticate("google", { failureRedirect: "/login" }),
-  async (req, res) => {
+// ✅ FIXED: Add another Gmail account
+router.get("/google/add-account", (req, res, next) => {
+  if (!isGoogleOAuthConfigured()) {
+    return res.status(503).json({ message: "Google OAuth not configured" });
+  }
+
+  // ✅ Token query param se lo (kyunki redirect mein header nahi jaata)
+  const token = req.query.token;
+  let state = "add_account";
+
+  if (token) {
     try {
-      // State se userId nikalo
-      let userId = null;
-      if (req.query.state) {
-        try {
-          const stateData = JSON.parse(req.query.state);
-          if (stateData.action === "add_account" && stateData.userId) {
-            userId = stateData.userId;
-          }
-        } catch (e) {
-          console.log("Could not parse state");
-        }
-      }
-
-      const token = generateToken(req.user._id);
-
-      // Agar add-account flow tha, toh success page pe bhejo
-      if (userId) {
-        res.redirect(
-          `${process.env.FRONTEND_URL}/auth/callback?token=${token}&added=true`,
-        );
-      } else {
-        res.redirect(
-          `${process.env.FRONTEND_URL}/auth/callback?token=${token}`,
-        );
-      }
-    } catch (error) {
-      console.error("Add account callback error:", error);
-      res.redirect(
-        `${process.env.FRONTEND_URL}/login?error=add_account_failed`,
-      );
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      state = JSON.stringify({ action: "add_account", userId: decoded.userId });
+    } catch (err) {
+      console.log("Invalid token, proceeding without user context");
     }
-  },
-);
+  }
+
+  passport.authenticate("google", {
+    scope: [
+      "profile",
+      "email",
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/gmail.modify",
+      "https://www.googleapis.com/auth/gmail.send",
+    ],
+    accessType: "offline",
+    prompt: "consent",
+    state: state,
+  })(req, res, next);
+});
 
 // Logout
 router.post("/logout", (req, res) => {

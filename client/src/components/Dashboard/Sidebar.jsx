@@ -86,6 +86,13 @@ export default function Sidebar({
   const addAccount = () => {
     // ✅ PRODUCTION URL
     const API_URL = "https://mail-mind-372t.onrender.com";
+    const token = localStorage.getItem("token"); // ✅ YEH LINE ADD KARO
+
+    if (!token) {
+      console.error("No token found, redirecting to login");
+      window.location.href = "/login";
+      return;
+    }
 
     window.location.href = `${API_URL}/auth/google/add-account?token=${token}`;
   };
