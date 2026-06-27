@@ -79,9 +79,9 @@ export default function Sidebar({
   };
 
   const addAccount = () => {
-    window.location.href = "http://localhost:5000/auth/google/add-account";
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    window.location.href = `${API_URL}/auth/google/add-account`;
   };
-
   return (
     <div className="h-full flex flex-col">
       {/* Logo */}

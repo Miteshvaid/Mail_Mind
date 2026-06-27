@@ -24,8 +24,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = () => {
-    // Redirect to Google OAuth
-    window.location.href = "http://localhost:5000/auth/google";
+    // ✅ FIX: Dynamic API URL
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    window.location.href = `${API_URL}/auth/google`;
   };
 
   const handleAuthCallback = (token) => {
