@@ -22,8 +22,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = () => {
-    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  // const login = () => {
+  //   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  //   window.location.href = `${API_URL}/auth/google`;
+  // };
+
+   const login = () => {
+    // ✅ PRODUCTION URL
+    const API_URL = "https://mail-mind-372t.onrender.com";
     window.location.href = `${API_URL}/auth/google`;
   };
 

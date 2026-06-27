@@ -78,8 +78,14 @@ export default function Sidebar({
     }
   };
 
+  // const addAccount = () => {
+  //   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  //   window.location.href = `${API_URL}/auth/google/add-account`;
+  // };
+
   const addAccount = () => {
-    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    // ✅ PRODUCTION URL
+    const API_URL = "https://mail-mind-372t.onrender.com";
     window.location.href = `${API_URL}/auth/google/add-account`;
   };
   return (
