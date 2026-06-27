@@ -1,29 +1,16 @@
-const express = require("express");
-const router = express.Router();
-const authMiddleware = require("../middleware/auth");
-const GmailAccount = require("../models/GmailAccount");
+const mongoose = require("mongoose");
 
-// Get all connected accounts
-router.get("/", authMiddleware, async (req, res) => {
-  try {
-    const accounts = await GmailAccount.find({ userId: req.user._id });
-    res.json(accounts);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+const gmailAccountSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  email: { type: String, required: true },
+  googleId: { type: String, required: true },
+  accessToken: { type: String, required: true },
+  refreshToken: { type: String, required: true },
+  tokenExpiry: { type: Date, required: true },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
 });
 
-// Disconnect account
-router.delete("/:id", authMiddleware, async (req, res) => {
-  try {
-    await GmailAccount.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user._id,
-    });
-    res.json({ message: "Account disconnected" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+gmailAccountSchema.index({ userId: 1, email: 1 }, { unique: true });
 
-module.exports = router;
+module.exports = mongoose.model("GmailAccount", gmailAccountSchema);
