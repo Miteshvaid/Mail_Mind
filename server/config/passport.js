@@ -34,51 +34,58 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
         try {
           const incomingEmail = profile.emails[0].value;
 
-          // Pehle dekho kya yeh Gmail already linked hai
-          let gmailAccount = await GmailAccount.findOne({
+          // ✅ Pehle dekho yeh email already linked hai kisi account se
+          let existingGmail = await GmailAccount.findOne({
             email: incomingEmail,
           });
 
           let user;
 
-          if (gmailAccount) {
-            // Already linked — usi user ko lo
-            user = await User.findById(gmailAccount.userId);
-          } else {
-            // Naya account — existing user dhundo
-            user = await User.findOne({ googleId: profile.id });
+          if (existingGmail) {
+            // ✅ Already linked — usi user ko lo, tokens update karo
+            user = await User.findById(existingGmail.userId);
 
-            if (!user) {
-              user = await User.findOne({ email: incomingEmail });
-            }
+            // Tokens refresh karo
+            existingGmail.accessToken = accessToken;
+            if (refreshToken) existingGmail.refreshToken = refreshToken;
+            existingGmail.tokenExpiry = new Date(Date.now() + 3600 * 1000);
+            existingGmail.isActive = true;
+            await existingGmail.save();
 
-            if (!user) {
-              user = await User.create({
-                googleId: profile.id,
-                email: incomingEmail,
-                name: profile.displayName,
-                picture: profile.photos[0]?.value,
-              });
-            }
+            return done(null, user);
           }
 
-          // GmailAccount update karo ya banao
-          await GmailAccount.findOneAndUpdate(
-            { email: incomingEmail },
-            {
-              userId: user._id,
-              email: incomingEmail,
+          // ✅ Naya email hai — check karo kya state mein userId hai (add-account flow)
+          // Agar nahi hai, toh naya user banao
+          user = await User.findOne({ googleId: profile.id });
+
+          if (!user) {
+            user = await User.findOne({ email: incomingEmail });
+          }
+
+          if (!user) {
+            user = await User.create({
               googleId: profile.id,
-              accessToken,
-              refreshToken: refreshToken || gmailAccount?.refreshToken,
-              tokenExpiry: new Date(Date.now() + 3600 * 1000),
-              isActive: true,
-            },
-            { upsert: true, new: true },
-          );
+              email: incomingEmail,
+              name: profile.displayName,
+              picture: profile.photos[0]?.value,
+            });
+          }
+
+          // ✅ Naya GmailAccount banao
+          await GmailAccount.create({
+            userId: user._id,
+            email: incomingEmail,
+            googleId: profile.id,
+            accessToken,
+            refreshToken: refreshToken || null,
+            tokenExpiry: new Date(Date.now() + 3600 * 1000),
+            isActive: true,
+          });
 
           done(null, user);
         } catch (error) {
+          console.error("Passport strategy error:", error);
           done(error, null);
         }
       },

@@ -86,7 +86,8 @@ export default function Sidebar({
   const addAccount = () => {
     // ✅ PRODUCTION URL
     const API_URL = "https://mail-mind-372t.onrender.com";
-    window.location.href = `${API_URL}/auth/google/add-account`;
+
+    window.location.href = `${API_URL}/auth/google/add-account?token=${token}`;
   };
   return (
     <div className="h-full flex flex-col">

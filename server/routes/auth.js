@@ -7,7 +7,6 @@ const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
-// ✅ Check if Google OAuth is configured
 const isGoogleOAuthConfigured = () => {
   return process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
 };
@@ -16,8 +15,7 @@ const isGoogleOAuthConfigured = () => {
 router.get("/google", (req, res, next) => {
   if (!isGoogleOAuthConfigured()) {
     return res.status(503).json({
-      message:
-        "Google OAuth not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env",
+      message: "Google OAuth not configured",
     });
   }
   passport.authenticate("google")(req, res, next);
@@ -39,11 +37,27 @@ router.get(
   },
 );
 
-// Add another Gmail account
+// ✅ FIXED: Add another Gmail account
 router.get("/google/add-account", (req, res, next) => {
   if (!isGoogleOAuthConfigured()) {
     return res.status(503).json({ message: "Google OAuth not configured" });
   }
+
+  // ✅ JWT token se current user identify karo
+  const authHeader = req.headers.authorization;
+  let state = "add_account";
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // User ID ko state mein encode karo
+      state = JSON.stringify({ action: "add_account", userId: decoded.userId });
+    } catch (err) {
+      console.log("Invalid token, proceeding without user context");
+    }
+  }
+
   passport.authenticate("google", {
     scope: [
       "profile",
@@ -54,9 +68,55 @@ router.get("/google/add-account", (req, res, next) => {
     ],
     accessType: "offline",
     prompt: "consent",
-    state: "add_account",
+    state: state,
   })(req, res, next);
 });
+
+// ✅ FIXED: Add Account Callback
+router.get(
+  "/google/add-account/callback",
+  (req, res, next) => {
+    if (!isGoogleOAuthConfigured()) {
+      return res.status(503).json({ message: "Google OAuth not configured" });
+    }
+    next();
+  },
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  async (req, res) => {
+    try {
+      // State se userId nikalo
+      let userId = null;
+      if (req.query.state) {
+        try {
+          const stateData = JSON.parse(req.query.state);
+          if (stateData.action === "add_account" && stateData.userId) {
+            userId = stateData.userId;
+          }
+        } catch (e) {
+          console.log("Could not parse state");
+        }
+      }
+
+      const token = generateToken(req.user._id);
+
+      // Agar add-account flow tha, toh success page pe bhejo
+      if (userId) {
+        res.redirect(
+          `${process.env.FRONTEND_URL}/auth/callback?token=${token}&added=true`,
+        );
+      } else {
+        res.redirect(
+          `${process.env.FRONTEND_URL}/auth/callback?token=${token}`,
+        );
+      }
+    } catch (error) {
+      console.error("Add account callback error:", error);
+      res.redirect(
+        `${process.env.FRONTEND_URL}/login?error=add_account_failed`,
+      );
+    }
+  },
+);
 
 // Logout
 router.post("/logout", (req, res) => {
