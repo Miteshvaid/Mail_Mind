@@ -1,0 +1,13 @@
+# Server
+server/node_modules/
+server/.env
+server/clearTokens.js
+
+# Client
+client/node_modules/
+client/dist/
+client/.env
+
+# General
+.DS_Store
+*.log

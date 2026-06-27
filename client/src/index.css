@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #4f46e5;
+}
+
+@layer base {
+  body {
+    background-color: #f9fafb;
+    color: #111827;
+  }
+}
+
+@layer components {
+  .category-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  .category-jobs { background-color: #dbeafe; color: #1e40af; }
+  .category-college { background-color: #e9d5ff; color: #7c3aed; }
+  .category-shopping { background-color: #dcfce7; color: #15803d; }
+  .category-personal { background-color: #fef9c3; color: #a16207; }
+  .category-spam { background-color: #fee2e2; color: #b91c1c; }
+  .category-uncategorized { background-color: #f3f4f6; color: #374151; }
+  
+  .priority-high { border-left: 4px solid #ef4444; }
+  .priority-medium { border-left: 4px solid #fb923c; }
+  .priority-low { border-left: 4px solid #d1d5db; }
+}
