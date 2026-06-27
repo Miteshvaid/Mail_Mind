@@ -10,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      // Token validate karo
       api
         .get("/api/accounts")
         .then(() => setLoading(false))
@@ -24,7 +23,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = () => {
-    // ✅ FIX: Dynamic API URL
     const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
     window.location.href = `${API_URL}/auth/google`;
   };
