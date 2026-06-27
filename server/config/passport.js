@@ -3,7 +3,6 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("../models/User");
 const GmailAccount = require("../models/GmailAccount");
 
-// ✅ SAFE: Agar env missing hai toh warning deke skip karo
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI =
@@ -11,14 +10,9 @@ const GOOGLE_REDIRECT_URI =
   "http://localhost:5000/auth/google/callback";
 
 if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-  console.warn(
-    "⚠️  WARNING: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing in .env",
-  );
-  console.warn("   Google OAuth will NOT work. Add credentials to .env file.");
-  console.warn("   Server will start but /auth/google routes will fail.");
+  console.warn("⚠️  WARNING: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing");
 }
 
-// Only setup strategy if credentials exist
 if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   passport.use(
     new GoogleStrategy(
@@ -38,26 +32,47 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
-          let user = await User.findOne({ googleId: profile.id });
+          const incomingEmail = profile.emails[0].value;
 
-          if (!user) {
-            user = await User.create({
-              googleId: profile.id,
-              email: profile.emails[0].value,
-              name: profile.displayName,
-              picture: profile.photos[0]?.value,
-            });
+          // Pehle dekho kya yeh Gmail already linked hai
+          let gmailAccount = await GmailAccount.findOne({
+            email: incomingEmail,
+          });
+
+          let user;
+
+          if (gmailAccount) {
+            // Already linked — usi user ko lo
+            user = await User.findById(gmailAccount.userId);
+          } else {
+            // Naya account — existing user dhundo
+            user = await User.findOne({ googleId: profile.id });
+
+            if (!user) {
+              user = await User.findOne({ email: incomingEmail });
+            }
+
+            if (!user) {
+              user = await User.create({
+                googleId: profile.id,
+                email: incomingEmail,
+                name: profile.displayName,
+                picture: profile.photos[0]?.value,
+              });
+            }
           }
 
+          // GmailAccount update karo ya banao
           await GmailAccount.findOneAndUpdate(
-            { userId: user._id, email: profile.emails[0].value },
+            { email: incomingEmail },
             {
               userId: user._id,
-              email: profile.emails[0].value,
+              email: incomingEmail,
               googleId: profile.id,
               accessToken,
-              refreshToken,
+              refreshToken: refreshToken || gmailAccount?.refreshToken,
               tokenExpiry: new Date(Date.now() + 3600 * 1000),
+              isActive: true,
             },
             { upsert: true, new: true },
           );
