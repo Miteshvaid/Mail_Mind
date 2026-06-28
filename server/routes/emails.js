@@ -5,13 +5,13 @@ const syncService = require("../services/syncService");
 const Email = require("../models/Email");
 
 // Get emails for an account
-router.get("/:accountId", authMiddleware, async (req, res) => {
+router.get("/", authMiddleware, async (req, res) => {
   try {
-    const emails = await Email.find({
-      accountId: req.params.accountId,
-      userId: req.user._id,
-    }).sort({ date: -1 });
+    const filter = { userId: req.user._id };
+    if (req.query.accountId) filter.accountId = req.query.accountId;
+    if (req.query.category) filter.category = req.query.category;
 
+    const emails = await Email.find(filter).sort({ receivedAt: -1 });
     res.json(emails);
   } catch (error) {
     res.status(500).json({ message: error.message });

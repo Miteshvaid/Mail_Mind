@@ -30,7 +30,7 @@ export default function Inbox({
       if (selectedAccount !== "all")
         params.append("accountId", selectedAccount);
 
-      const res = await api.get(`/api/emails?${params}`);
+      const res = await api.get(`/api/emails/${selectedAccount}`);
       setEmails(res.data);
     } catch (error) {
       console.error("Failed to fetch emails");
@@ -42,7 +42,7 @@ export default function Inbox({
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await api.post("/api/emails/sync");
+      await api.post(`/api/emails/sync/${selectedAccount}`);
       setTimeout(fetchEmails, 3000);
     } catch (error) {
       console.error("Sync failed");
