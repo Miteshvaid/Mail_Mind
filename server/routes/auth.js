@@ -3,13 +3,14 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const GmailAccount = require("../models/GmailAccount");
 const IMAPService = require("../services/imapService");
+const authMiddleware = require("../middleware/auth"); // ✅ ADD THIS
 const router = express.Router();
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
-// ✅ REGISTER
+// ✅ REGISTER — NO auth needed
 router.post("/register", async (req, res) => {
   try {
     const { email, password, name } = req.body;
@@ -23,19 +24,14 @@ router.post("/register", async (req, res) => {
 
     res.json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-      },
+      user: { id: user._id, email: user.email, name: user.name },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// ✅ LOGIN
+// ✅ LOGIN — NO auth needed
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -50,23 +46,19 @@ router.post("/login", async (req, res) => {
     const token = generateToken(user._id);
     res.json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-      },
+      user: { id: user._id, email: user.email, name: user.name },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// ✅ ADD GMAIL ACCOUNT (IMAP)
-router.post("/add-gmail", async (req, res) => {
+// ✅ ADD GMAIL — AUTH REQUIRED (isliye authMiddleware lagao!)
+router.post("/add-gmail", authMiddleware, async (req, res) => {
+  // ✅ ADD authMiddleware
   try {
     const { email, appPassword } = req.body;
-    const userId = req.user._id;
+    const userId = req.user._id; // ✅ Ab req.user defined hoga!
 
     // Test IMAP connection
     const imap = new IMAPService(email, appPassword);
@@ -85,7 +77,7 @@ router.post("/add-gmail", async (req, res) => {
   }
 });
 
-// ✅ LOGOUT
+// ✅ LOGOUT — NO auth needed
 router.post("/logout", (req, res) => {
   res.json({ message: "Logged out" });
 });

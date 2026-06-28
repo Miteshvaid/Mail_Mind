@@ -7,37 +7,15 @@ dotenv.config();
 
 const app = express();
 
-// ✅ SAHI — Multiple origins allow karo
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://mailmind-app.vercel.app",
-  "https://mail-mind-woad.vercel.app", // ✅ Tera actual Vercel URL
-];
+// ✅ CORS — Sab origins allow karo (development ke liye)
+app.use(cors({
+  origin: true,  // Request ka origin automatically allow
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+}));
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl, Postman)
-      if (!origin) return callback(null, true);
-
-      if (
-        allowedOrigins.indexOf(origin) !== -1 ||
-        allowedOrigins.includes(origin)
-      ) {
-        callback(null, true);
-      } else {
-        console.log("CORS blocked:", origin); // Debug ke liye
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  }),
-);
-
-// ✅ Preflight requests handle karo
+// ✅ Preflight requests
 app.options("*", cors());
 
 app.use(express.json());

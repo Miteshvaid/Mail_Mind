@@ -7,14 +7,16 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// ✅ Request interceptor — har request mein token add karo
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`; // ✅ "Bearer " prefix important!
   }
   return config;
 });
 
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
