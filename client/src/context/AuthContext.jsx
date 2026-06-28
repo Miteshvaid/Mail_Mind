@@ -12,7 +12,10 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       api
         .get("/api/accounts")
-        .then(() => setLoading(false))
+        .then(() => {
+          setUser({ token });
+          setLoading(false);
+        })
         .catch(() => {
           localStorage.removeItem("token");
           setLoading(false);
@@ -23,30 +26,27 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    try {
-      const res = await api.post("/auth/login", { email, password });
-      localStorage.setItem("token", res.data.token);
-      setUser(res.data.user);
-      return res.data;
-    } catch (error) {
-      throw error;
-    }
+    console.log("Login called with:", email, password ? "YES" : "NO");
+
+    const res = await api.post("/auth/login", { email, password });
+    console.log("Login response:", res.data);
+
+    const token = res.data.token;
+    localStorage.setItem("token", token);
+    setUser(res.data.user);
+    return res.data;
   };
 
   const register = async (email, password, name) => {
-    try {
-      const res = await api.post("/auth/register", { email, password, name });
-      localStorage.setItem("token", res.data.token);
-      setUser(res.data.user);
-      return res.data;
-    } catch (error) {
-      throw error;
-    }
-  };
+    console.log("Register called with:", email, password ? "YES" : "NO", name);
 
-  const handleAuthCallback = (token) => {
+    const res = await api.post("/auth/register", { email, password, name });
+    console.log("Register response:", res.data);
+
+    const token = res.data.token;
     localStorage.setItem("token", token);
-    setUser({ token });
+    setUser(res.data.user);
+    return res.data;
   };
 
   const logout = () => {
@@ -57,9 +57,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, login, register, logout, handleAuthCallback, loading }}
-    >
+    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -7,18 +7,27 @@ dotenv.config();
 
 const app = express();
 
-// ✅ CORS — Sab origins allow karo (development ke liye)
-app.use(cors({
-  origin: true,  // Request ka origin automatically allow
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-}));
+// ✅ CORS
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  }),
+);
 
-// ✅ Preflight requests
 app.options("*", cors());
 
-app.use(express.json());
+// ✅ BODY PARSER — YEH LINES HONI CHAHIYE!
+app.use(express.json()); // JSON parse karo
+app.use(express.urlencoded({ extended: true })); // Form data parse karo
+
+// ✅ DEBUG — Request body log karo
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`, req.body);
+  next();
+});
 
 // Routes
 app.use("/auth", require("./routes/auth"));

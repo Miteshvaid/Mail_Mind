@@ -18,14 +18,37 @@ export default function Login() {
     setError("");
     setLoading(true);
 
+    // ✅ DEBUG
+    console.log("Submitting:", {
+      isLogin,
+      email,
+      password: password ? "YES" : "NO",
+      name,
+    });
+
     try {
+      let res;
       if (isLogin) {
-        await login(email, password);
+        // ✅ Ensure data bhej rahe hain
+        if (!email || !password) {
+          setError("Email and password required");
+          setLoading(false);
+          return;
+        }
+        res = await login(email, password);
       } else {
-        await register(email, password, name);
+        if (!email || !password || !name) {
+          setError("All fields required");
+          setLoading(false);
+          return;
+        }
+        res = await register(email, password, name);
       }
+
+      console.log("Success:", res);
       navigate("/dashboard");
     } catch (err) {
+      console.error("Error:", err.response?.data);
       setError(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -39,10 +62,13 @@ export default function Login() {
           <h2 className="text-3xl font-bold text-indigo-600">
             {isLogin ? "Welcome Back" : "Get Started"}
           </h2>
-          <p className="mt-2 text-gray-600">
-            {isLogin ? "Sign in to your account" : "Create your account"}
-          </p>
         </div>
+
+        {error && (
+          <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm text-center">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           {!isLogin && (
@@ -54,7 +80,7 @@ export default function Login() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="mt-1 w-full px-3 py-2 border rounded-lg"
                 required
               />
             </div>
@@ -62,13 +88,13 @@ export default function Login() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Email Address
+              Email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="mt-1 w-full px-3 py-2 border rounded-lg"
               required
             />
           </div>
@@ -81,27 +107,26 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="mt-1 w-full px-3 py-2 border rounded-lg"
               required
+              minLength={6}
             />
           </div>
-
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            className="w-full py-2 px-4 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
           >
-            {loading ? "Loading..." : isLogin ? "Sign In" : "Create Account"}
+            {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-600">
+        <p className="text-center text-sm">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-indigo-600 hover:text-indigo-500 font-medium"
+            className="text-indigo-600"
           >
             {isLogin ? "Sign Up" : "Sign In"}
           </button>
