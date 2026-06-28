@@ -1,5 +1,45 @@
 import { useState } from "react";
-// ... existing imports
+import {
+  InboxIcon,
+  BriefcaseIcon,
+  AcademicCapIcon,
+  ShoppingBagIcon,
+  UserIcon,
+  ExclamationTriangleIcon,
+  PlusIcon,
+  ArrowRightOnRectangleIcon,
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../../context/AuthContext"; // ✅ IMPORT useAuth
+import api from "../../services/api";
+
+const categories = [
+  { id: "all", name: "All Emails", icon: InboxIcon, count: null },
+  { id: "Jobs", name: "Jobs", icon: BriefcaseIcon, color: "text-blue-600" },
+  {
+    id: "College",
+    name: "College",
+    icon: AcademicCapIcon,
+    color: "text-purple-600",
+  },
+  {
+    id: "Shopping",
+    name: "Shopping",
+    icon: ShoppingBagIcon,
+    color: "text-green-600",
+  },
+  {
+    id: "Personal",
+    name: "Personal",
+    icon: UserIcon,
+    color: "text-yellow-600",
+  },
+  {
+    id: "Spam",
+    name: "Spam",
+    icon: ExclamationTriangleIcon,
+    color: "text-red-600",
+  },
+];
 
 export default function Sidebar({
   selectedCategory,
@@ -7,13 +47,16 @@ export default function Sidebar({
   selectedAccount,
   onAccountChange,
 }) {
-  const { logout } = useAuth();
+  const { logout } = useAuth(); // ✅ YEH LINE HONI CHAHIYE
   const [accounts, setAccounts] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
+  const [categoryCounts, setCategoryCounts] = useState({});
+
+  // ... rest of code
 
   // ... existing fetchAccounts, fetchCategoryCounts
 
