@@ -70,7 +70,11 @@ export default function Login() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-8 space-y-6"
+          autoComplete="on"
+        >
           {!isLogin && (
             <div>
               <label className="block text-sm font-medium text-gray-700">
@@ -81,7 +85,7 @@ export default function Login() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="mt-1 w-full px-3 py-2 border rounded-lg"
-                required
+                autoComplete="name"
               />
             </div>
           )}
@@ -95,6 +99,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 w-full px-3 py-2 border rounded-lg"
+              autoComplete="email"
               required
             />
           </div>
@@ -108,6 +113,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 w-full px-3 py-2 border rounded-lg"
+              autoComplete="current-password"
               required
               minLength={6}
             />
