@@ -30,24 +30,19 @@ export default function Inbox({
       if (selectedAccount !== "all")
         params.append("accountId", selectedAccount);
 
-      const res = await api.get(`/api/emails/${selectedAccount}`);
+      const res = await api.get(`/api/emails?${params}`);
       setEmails(res.data);
     } catch (error) {
       console.error("Failed to fetch emails");
     } finally {
       setLoading(false);
     }
-  };
+  }; // ✅ fetchEmails closing brace
 
   const handleSync = async () => {
     setSyncing(true);
     try {
-      if (selectedAccount === "all") {
-        // Sabke accounts sync karo
-        await api.post("/api/emails/sync-all");
-      } else {
-        await api.post(`/api/emails/sync/${selectedAccount}`);
-      }
+      await api.post("/api/emails/sync-all");
       setTimeout(fetchEmails, 3000);
     } catch (error) {
       console.error("Sync failed");

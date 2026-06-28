@@ -2,6 +2,8 @@
 server/node_modules/
 server/.env
 server/clearTokens.js
+node_modules/
+.env
 
 # Client
 client/node_modules/

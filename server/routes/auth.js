@@ -108,8 +108,8 @@ router.post("/add-gmail", authMiddleware, async (req, res) => {
     const userId = req.user._id; // ✅ Ab req.user defined hoga!
 
     // Test IMAP connection
-    const imap = new IMAPService(email, appPassword);
-    await imap.fetchEmails(1);
+    // const imap = new IMAPService(email, appPassword);
+    // await imap.fetchEmails(1);
 
     // Save to DB
     await GmailAccount.findOneAndUpdate(
