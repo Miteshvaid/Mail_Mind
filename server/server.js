@@ -17,7 +17,7 @@ app.use(
   }),
 );
 
-// ✅ 2. Handle OPTIONS preflight (CORS ke baad)
+// ✅ 2. Handle OPTIONS preflight
 app.options("*", (req, res) => {
   res.sendStatus(200);
 });
@@ -31,8 +31,8 @@ app.use((req, res, next) => {
   console.log("=== REQUEST ===");
   console.log("Method:", req.method);
   console.log("URL:", req.url);
-  console.log("Headers:", req.headers["content-type"]);
-  console.log("Body:", req.body);
+  console.log("Content-Type:", req.headers["content-type"]);
+  console.log("Body:", JSON.stringify(req.body)); // ✅ Stringify karo
   console.log("===============");
   next();
 });

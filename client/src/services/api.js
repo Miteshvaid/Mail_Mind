@@ -10,22 +10,19 @@ const api = axios.create({
   },
 });
 
-// Request interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
-  // Ensure headers exist
   config.headers = config.headers || {};
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Debug
   console.log("=== FRONTEND REQUEST ===");
   console.log("URL:", config.url);
   console.log("Method:", config.method);
-  console.log("Data:", config.data);
+  console.log("Data:", JSON.stringify(config.data)); // ✅ Stringify
   console.log("Headers:", config.headers);
   console.log("=======================");
 
