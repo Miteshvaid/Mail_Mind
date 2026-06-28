@@ -1,118 +1,93 @@
 const express = require("express");
-const passport = require("passport");
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+const GmailAccount = require("../models/GmailAccount");
+const IMAPService = require("../services/imapService");
 const router = express.Router();
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
-const isGoogleOAuthConfigured = () => {
-  return process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
-};
+// ✅ REGISTER
+router.post("/register", async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
 
-// Step 1: Google OAuth login start
-router.get("/google", (req, res, next) => {
-  if (!isGoogleOAuthConfigured()) {
-    return res.status(503).json({ message: "Google OAuth not configured" });
+    const existing = await User.findOne({ email });
+    if (existing)
+      return res.status(400).json({ message: "Email already exists" });
+
+    const user = await User.create({ email, password, name });
+    const token = generateToken(user._id);
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-  passport.authenticate("google", {
-    scope: [
-      "profile",
-      "email",
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/gmail.modify",
-      "https://www.googleapis.com/auth/gmail.send",
-    ],
-    accessType: "offline",
-    prompt: "consent",
-  })(req, res, next);
 });
 
-// Step 2: Google OAuth callback
-router.get(
-  "/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login" }),
-  async (req, res) => {
-    try {
-      const stateRaw = req.query.state;
-      let state = null;
+// ✅ LOGIN
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-      try {
-        state = JSON.parse(stateRaw);
-      } catch (_) {}
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-      // Add account flow — existing user ke saath link karo
-      if (state?.action === "add_account" && state?.userId) {
-        const GmailAccount = require("../models/GmailAccount");
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid credentials" });
 
-        // Naye logged-in account ki email lo
-        const newEmail = req.user.email;
-
-        // Existing GmailAccount ko sahi userId se link karo
-        await GmailAccount.findOneAndUpdate(
-          { email: newEmail },
-          { userId: state.userId },
-          { new: true },
-        );
-
-        // Original user ka token banao (naye user ka nahi!)
-        const token = generateToken(state.userId);
-        return res.redirect(
-          `${process.env.FRONTEND_URL}/auth/callback?token=${token}`,
-        );
-      }
-
-      // Normal login flow
-      const token = generateToken(req.user._id);
-      res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
-    } catch (error) {
-      console.error("Callback error:", error);
-      res.redirect("/login");
-    }
-  },
-);
-
-// Add another Gmail account
-router.get("/google/add-account", (req, res, next) => {
-  if (!isGoogleOAuthConfigured()) {
-    return res.status(503).json({ message: "Google OAuth not configured" });
+    const token = generateToken(user._id);
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  const token = req.query.token;
-  let state = "add_account";
-
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      state = JSON.stringify({
-        action: "add_account",
-        userId: decoded.userId,
-      });
-    } catch (err) {
-      console.log("Invalid token");
-    }
-  }
-
-  passport.authenticate("google", {
-    scope: [
-      "profile",
-      "email",
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/gmail.modify",
-      "https://www.googleapis.com/auth/gmail.send",
-    ],
-    accessType: "offline",
-    prompt: "consent",
-    state: state,
-  })(req, res, next);
 });
 
-// Logout
+// ✅ ADD GMAIL ACCOUNT (IMAP)
+router.post("/add-gmail", async (req, res) => {
+  try {
+    const { email, appPassword } = req.body;
+    const userId = req.user._id;
+
+    // Test IMAP connection
+    const imap = new IMAPService(email, appPassword);
+    await imap.fetchEmails(1);
+
+    // Save to DB
+    await GmailAccount.findOneAndUpdate(
+      { userId, email },
+      { userId, email, appPassword, isActive: true, lastSync: new Date() },
+      { upsert: true, new: true },
+    );
+
+    res.json({ message: "Gmail account added successfully" });
+  } catch (error) {
+    res.status(400).json({ message: "Failed to connect: " + error.message });
+  }
+});
+
+// ✅ LOGOUT
 router.post("/logout", (req, res) => {
-  req.logout(() => {
-    res.json({ message: "Logged out" });
-  });
+  res.json({ message: "Logged out" });
 });
 
 module.exports = router;

@@ -1,7 +1,5 @@
 import axios from "axios";
 
-// const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const api = axios.create({
@@ -9,7 +7,6 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor - har request mein token add karo
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -18,7 +15,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor - 401 pe logout
 api.interceptors.response.use(
   (response) => response,
   (error) => {

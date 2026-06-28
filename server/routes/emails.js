@@ -1,32 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/auth");
+const syncService = require("../services/syncService");
 const Email = require("../models/Email");
-const GmailAccount = require("../models/GmailAccount");
-const { syncUserEmails } = require("../services/syncService");
 
-// Get all emails (unified inbox)
-router.get("/", authMiddleware, async (req, res) => {
+// Get emails for an account
+router.get("/:accountId", authMiddleware, async (req, res) => {
   try {
-    const { category, accountId, search, priority } = req.query;
-
-    const query = { userId: req.user._id };
-
-    if (category && category !== "all") query.category = category;
-    if (accountId) query.accountId = accountId;
-    if (priority) query.priority = priority;
-    if (search) {
-      query.$or = [
-        { subject: { $regex: search, $options: "i" } },
-        { from: { $regex: search, $options: "i" } },
-        { body: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const emails = await Email.find(query)
-      .populate("accountId", "email")
-      .sort({ receivedAt: -1 })
-      .limit(50);
+    const emails = await Email.find({
+      accountId: req.params.accountId,
+      userId: req.user._id,
+    }).sort({ date: -1 });
 
     res.json(emails);
   } catch (error) {
@@ -34,55 +18,28 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// Get single email
-router.get("/:id", authMiddleware, async (req, res) => {
+// Sync emails manually
+router.post("/sync/:accountId", authMiddleware, async (req, res) => {
   try {
-    const email = await Email.findOne({
-      _id: req.params.id,
-      userId: req.user._id,
-    }).populate("accountId", "email");
+    const result = await syncService.syncAccount(
+      req.params.accountId,
+      req.user._id,
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-    if (!email) return res.status(404).json({ message: "Email not found" });
-
-    // Mark as read
-    if (!email.isRead) {
-      email.isRead = true;
-      await email.save();
-    }
-
+// Mark as read
+router.patch("/:id/read", authMiddleware, async (req, res) => {
+  try {
+    const email = await Email.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      { isRead: true },
+      { new: true },
+    );
     res.json(email);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Manual sync trigger
-router.post("/sync", authMiddleware, async (req, res) => {
-  try {
-    // Async response - sync runs in background
-    res.json({ message: "Sync started" });
-
-    // Background sync
-    syncUserEmails(req.user._id).catch(console.error);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Toggle star
-router.patch("/:id/star", authMiddleware, async (req, res) => {
-  try {
-    const email = await Email.findOne({
-      _id: req.params.id,
-      userId: req.user._id,
-    });
-
-    if (!email) return res.status(404).json({ message: "Not found" });
-
-    email.isStarred = !email.isStarred;
-    await email.save();
-
-    res.json({ isStarred: email.isStarred });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

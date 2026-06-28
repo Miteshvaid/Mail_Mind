@@ -22,15 +22,26 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // const login = () => {
-  //   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-  //   window.location.href = `${API_URL}/auth/google`;
-  // };
+  const login = async (email, password) => {
+    try {
+      const res = await api.post("/auth/login", { email, password });
+      localStorage.setItem("token", res.data.token);
+      setUser(res.data.user);
+      return res.data;
+    } catch (error) {
+      throw error;
+    }
+  };
 
-   const login = () => {
-    // ✅ PRODUCTION URL
-    const API_URL = "https://mail-mind-372t.onrender.com";
-    window.location.href = `${API_URL}/auth/google`;
+  const register = async (email, password, name) => {
+    try {
+      const res = await api.post("/auth/register", { email, password, name });
+      localStorage.setItem("token", res.data.token);
+      setUser(res.data.user);
+      return res.data;
+    } catch (error) {
+      throw error;
+    }
   };
 
   const handleAuthCallback = (token) => {
@@ -47,7 +58,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, handleAuthCallback, loading }}
+      value={{ user, login, register, logout, handleAuthCallback, loading }}
     >
       {children}
     </AuthContext.Provider>

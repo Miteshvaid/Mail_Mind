@@ -1,45 +1,5 @@
-import { useState, useEffect } from "react";
-import {
-  InboxIcon,
-  BriefcaseIcon,
-  AcademicCapIcon,
-  ShoppingBagIcon,
-  UserIcon,
-  ExclamationTriangleIcon,
-  PlusIcon,
-  ArrowRightOnRectangleIcon,
-} from "@heroicons/react/24/outline";
-import { useAuth } from "../../context/AuthContext";
-import api from "../../services/api";
-
-const categories = [
-  { id: "all", name: "All Emails", icon: InboxIcon, count: null },
-  { id: "Jobs", name: "Jobs", icon: BriefcaseIcon, color: "text-blue-600" },
-  {
-    id: "College",
-    name: "College",
-    icon: AcademicCapIcon,
-    color: "text-purple-600",
-  },
-  {
-    id: "Shopping",
-    name: "Shopping",
-    icon: ShoppingBagIcon,
-    color: "text-green-600",
-  },
-  {
-    id: "Personal",
-    name: "Personal",
-    icon: UserIcon,
-    color: "text-yellow-600",
-  },
-  {
-    id: "Spam",
-    name: "Spam",
-    icon: ExclamationTriangleIcon,
-    color: "text-red-600",
-  },
-];
+import { useState } from "react";
+// ... existing imports
 
 export default function Sidebar({
   selectedCategory,
@@ -49,161 +9,133 @@ export default function Sidebar({
 }) {
   const { logout } = useAuth();
   const [accounts, setAccounts] = useState([]);
-  const [categoryCounts, setCategoryCounts] = useState({});
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [addError, setAddError] = useState("");
+  const [addLoading, setAddLoading] = useState(false);
 
-  useEffect(() => {
-    fetchAccounts();
-    fetchCategoryCounts();
-  }, []);
+  // ... existing fetchAccounts, fetchCategoryCounts
 
-  const fetchAccounts = async () => {
+  const handleAddAccount = async (e) => {
+    e.preventDefault();
+    setAddError("");
+    setAddLoading(true);
+
     try {
-      const res = await api.get("/api/accounts");
-      setAccounts(res.data);
-    } catch (error) {
-      console.error("Failed to fetch accounts");
-    }
-  };
-
-  const fetchCategoryCounts = async () => {
-    try {
-      const res = await api.get("/api/emails");
-      const counts = {};
-      res.data.forEach((email) => {
-        counts[email.category] = (counts[email.category] || 0) + 1;
+      await api.post("/auth/add-gmail", {
+        email: newEmail,
+        appPassword: newPassword,
       });
-      setCategoryCounts(counts);
-    } catch (error) {
-      console.error("Failed to fetch counts");
+      setShowAddModal(false);
+      setNewEmail("");
+      setNewPassword("");
+      fetchAccounts(); // Refresh list
+    } catch (err) {
+      setAddError(err.response?.data?.message || "Failed to add account");
+    } finally {
+      setAddLoading(false);
     }
   };
 
-  // const addAccount = () => {
-  //   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-  //   window.location.href = `${API_URL}/auth/google/add-account`;
-  // };
-
-  const addAccount = () => {
-    // ✅ PRODUCTION URL
-    const API_URL = "https://mail-mind-372t.onrender.com";
-    const token = localStorage.getItem("token"); // ✅ YEH LINE ADD KARO
-
-    if (!token) {
-      console.error("No token found, redirecting to login");
-      window.location.href = "/login";
-      return;
-    }
-
-    window.location.href = `${API_URL}/auth/google/add-account?token=${token}`;
-  };
   return (
     <div className="h-full flex flex-col">
-      {/* Logo */}
-      <div className="p-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-indigo-600 flex items-center gap-2">
-          <InboxIcon className="w-6 h-6" />
-          MailMind
-        </h1>
-      </div>
+      {/* ... existing logo and categories */}
 
-      {/* Categories */}
-      <div className="flex-1 overflow-y-auto p-3">
-        <div className="mb-6">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
-            Categories
-          </h3>
-          <nav className="space-y-1">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => onCategoryChange(cat.id)}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                  ${
-                    selectedCategory === cat.id
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }
-                `}
-              >
-                <cat.icon className={`w-5 h-5 ${cat.color || ""}`} />
-                <span className="flex-1 text-left">{cat.name}</span>
-                {categoryCounts[cat.id] > 0 && (
-                  <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
-                    {categoryCounts[cat.id]}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
+      {/* Accounts Section */}
+      <div className="mb-6">
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
+          Accounts
+        </h3>
+        <nav className="space-y-1">
+          {/* ... existing All Accounts button */}
 
-        {/* Accounts */}
-        <div className="mb-6">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
-            Accounts
-          </h3>
-          <nav className="space-y-1">
+          {accounts.map((acc) => (
             <button
-              onClick={() => onAccountChange("all")}
-              className={`
-                w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                ${
-                  selectedAccount === "all"
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-gray-600 hover:bg-gray-50"
-                }
-              `}
+              key={acc._id}
+              onClick={() => onAccountChange(acc._id)}
+              // ... existing className
             >
-              <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center">
-                <span className="text-xs text-indigo-600">A</span>
+              <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                <span className="text-xs text-green-600">
+                  {acc.email[0].toUpperCase()}
+                </span>
               </div>
-              <span className="flex-1 text-left">All Accounts</span>
+              <span className="flex-1 text-left truncate">{acc.email}</span>
             </button>
+          ))}
 
-            {accounts.map((acc) => (
-              <button
-                key={acc._id}
-                onClick={() => onAccountChange(acc._id)}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                  ${
-                    selectedAccount === acc._id
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }
-                `}
-              >
-                <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-xs text-green-600">
-                    {acc.email[0].toUpperCase()}
-                  </span>
-                </div>
-                <span className="flex-1 text-left truncate">{acc.email}</span>
-              </button>
-            ))}
+          {/* Add Account Button */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+          >
+            <PlusIcon className="w-5 h-5" />
+            <span>Add Account</span>
+          </button>
+        </nav>
+      </div>
 
-            <button
-              onClick={addAccount}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
-            >
-              <PlusIcon className="w-5 h-5" />
-              <span>Add Account</span>
-            </button>
-          </nav>
+      {/* Add Account Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl m-4">
+            <h3 className="text-lg font-bold mb-4">Add Gmail Account</h3>
+
+            {/* Instructions */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-xs">
+              <p className="font-semibold text-yellow-800 mb-1">
+                How to get App Password:
+              </p>
+              <ol className="text-yellow-700 list-decimal list-inside space-y-1">
+                <li>Go to Google Account → Security</li>
+                <li>Enable 2-Step Verification</li>
+                <li>Click "App Passwords"</li>
+                <li>Select "Mail" → "Other" → Name: "MailMind"</li>
+                <li>Copy 16-character password</li>
+              </ol>
+            </div>
+
+            <form onSubmit={handleAddAccount} className="space-y-3">
+              <input
+                type="email"
+                placeholder="yourname@gmail.com"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                required
+              />
+              <input
+                type="password"
+                placeholder="App Password (16 chars)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                required
+              />
+              {addError && <p className="text-red-500 text-sm">{addError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 py-2 border rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addLoading}
+                  className="flex-1 py-2 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
+                >
+                  {addLoading ? "Connecting..." : "Add"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Logout */}
-      <div className="p-3 border-t border-gray-200">
-        <button
-          onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-        >
-          <ArrowRightOnRectangleIcon className="w-5 h-5" />
-          <span>Logout</span>
-        </button>
-      </div>
+      {/* ... existing logout */}
     </div>
   );
 }

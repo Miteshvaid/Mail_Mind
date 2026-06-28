@@ -1,69 +1,41 @@
-require("dotenv").config();
 const express = require("express");
+const mongoose = require("mongoose");
 const cors = require("cors");
-const session = require("express-session");
-const passport = require("passport");
+const dotenv = require("dotenv");
 
-const connectDB = require("./config/database");
-require("./config/passport");
-
-const authRoutes = require("./routes/auth");
-const emailRoutes = require("./routes/emails");
-const aiRoutes = require("./routes/ai");
-const accountRoutes = require("./routes/accounts");
-const errorHandler = require("./middleware/errorHandler");
-
-const { syncUserEmails } = require("./services/syncService");
+dotenv.config();
 
 const app = express();
-if (!process.env.JWT_SECRET) {
-  console.error('❌ ERROR: .env file not loaded! Make sure .env exists in server folder.');
-  process.exit(1);
-}
-// Middleware
+
+// ✅ SAHI — Array format mein multiple origins
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: ["http://localhost:5173", "https://mailmind-app.vercel.app"],
     credentials: true,
   }),
 );
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false }, // true for HTTPS
-  }),
-);
-app.use(passport.initialize());
-app.use(passport.session());
+
+// Ya agar env se karna hai:
+// origin: process.env.FRONTEND_URL || "http://localhost:5173",
+
+app.use(express.json());
 
 // Routes
-app.use("/auth", authRoutes);
-app.use("/api/emails", emailRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/accounts", accountRoutes);
+app.use("/auth", require("./routes/auth"));
+app.use("/api/accounts", require("./routes/accounts"));
+app.use("/api/emails", require("./routes/emails"));
+app.use("/api/ai", require("./routes/ai"));
 
 // Health check
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", timestamp: new Date(), uptime: process.uptime() });
-});
+app.get("/health", (req, res) => res.json({ status: "OK" }));
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
-});
-
-// Global error handler
-app.use(errorHandler);
+// MongoDB Connect
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => console.error("❌ MongoDB Error:", err));
 
 const PORT = process.env.PORT || 5000;
-
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 MailMind Server running on port ${PORT}`);
-    console.log(`📧 Health Check: http://localhost:${PORT}/health`);
-  });
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });

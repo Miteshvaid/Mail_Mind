@@ -1,92 +1,55 @@
-// server/services/syncService.js
-const GmailAccount = require("../models/GmailAccount");
+const IMAPService = require("./imapService");
+// ❌ DELETE: const gmailService = require('./gmailService');
 const Email = require("../models/Email");
-const { fetchEmails } = require("./gmailService");
-const {
-  categorizeEmail,
-  summarizeEmail,
-  generateReplySuggestions,
-  analyzePriority,
-} = require("./aiService"); // ← Changed from claudeService to aiService
+const aiService = require("./aiService");
 
-const syncAccountEmails = async (account, userId) => {
-  try {
-    console.log(`🔄 Syncing emails for ${account.email}...`);
+class SyncService {
+  async syncAccount(accountId, userId) {
+    try {
+      const GmailAccount = require("../models/GmailAccount");
+      const account = await GmailAccount.findOne({ _id: accountId, userId });
 
-    const emails = await fetchEmails(account, 30);
+      if (!account) throw new Error("Account not found");
 
-    for (const emailData of emails) {
-      const existingEmail = await Email.findOne({
-        gmailMessageId: emailData.gmailMessageId,
-        accountId: account._id,
-      });
+      // ✅ Use IMAP instead of Gmail API
+      const imap = new IMAPService(account.email, account.appPassword);
+      const emails = await imap.fetchEmails(50);
 
-      if (existingEmail) {
-        existingEmail.isRead = emailData.isRead;
-        existingEmail.isStarred = emailData.isStarred;
-        await existingEmail.save();
-        continue;
+      // Save to database with AI categorization
+      for (const email of emails) {
+        const category = await aiService.categorizeEmail(
+          email.subject,
+          email.body,
+        );
+
+        await Email.findOneAndUpdate(
+          { accountId, gmailId: email.id },
+          {
+            accountId,
+            userId,
+            gmailId: email.id,
+            subject: email.subject,
+            from: email.from,
+            to: email.to,
+            body: email.body,
+            category,
+            isRead: email.isRead,
+            date: email.date,
+          },
+          { upsert: true, new: true },
+        );
       }
 
-      // 🎯 AI Categorization (Gemini/Groq/Rule-based)
-      const categoryResult = await categorizeEmail(
-        emailData.subject,
-        emailData.body,
-        emailData.from,
-      );
+      // Update last sync
+      account.lastSync = new Date();
+      await account.save();
 
-      // ⚡ Priority Analysis
-      const priorityResult = await analyzePriority(
-        emailData.subject,
-        emailData.body,
-      );
-
-      // 📋 AI Summary
-      const summary = await summarizeEmail(emailData.subject, emailData.body);
-
-      // 💬 Reply Suggestions
-      const replies = await generateReplySuggestions(
-        emailData.subject,
-        emailData.body,
-        emailData.from,
-      );
-
-      const newEmail = new Email({
-        userId,
-        accountId: account._id,
-        ...emailData,
-        category: categoryResult.category,
-        categoryConfidence: categoryResult.confidence,
-        priority: priorityResult.priority,
-        hasDeadline: priorityResult.hasDeadline,
-        deadlineDate: priorityResult.deadlineDate
-          ? new Date(priorityResult.deadlineDate)
-          : null,
-        aiSummary: summary,
-        replySuggestions: replies,
-      });
-
-      await newEmail.save();
-      console.log(
-        `✅ Saved: ${emailData.subject} → ${categoryResult.category}`,
-      );
+      return { success: true, count: emails.length };
+    } catch (error) {
+      console.error("Sync error:", error);
+      throw error;
     }
-
-    console.log(`✅ Sync complete for ${account.email}`);
-  } catch (error) {
-    console.error(`❌ Sync error for ${account.email}:`, error);
   }
-};
+}
 
-const syncUserEmails = async (userId) => {
-  const accounts = await GmailAccount.find({ userId, isActive: true });
-
-  for (const account of accounts) {
-    await syncAccountEmails(account, userId);
-  }
-};
-
-module.exports = {
-  syncAccountEmails,
-  syncUserEmails,
-};
+module.exports = new SyncService();
