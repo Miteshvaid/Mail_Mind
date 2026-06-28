@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 
-// ✅ CORS
+// ✅ STEP 1: CORS (sabse pehle)
 app.use(
   cors({
     origin: true,
@@ -19,17 +19,17 @@ app.use(
 
 app.options("*", cors());
 
-// ✅ BODY PARSER — YEH LINES HONI CHAHIYE!
-app.use(express.json()); // JSON parse karo
-app.use(express.urlencoded({ extended: true })); // Form data parse karo
+// ✅ STEP 2: BODY PARSER (CORS ke baad, routes se pehle!)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ✅ DEBUG — Request body log karo
+// ✅ STEP 3: DEBUG (routes se pehle)
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`, req.body);
   next();
 });
 
-// Routes
+// ✅ STEP 4: ROUTES (sabse baad mein!)
 app.use("/auth", require("./routes/auth"));
 app.use("/api/accounts", require("./routes/accounts"));
 app.use("/api/emails", require("./routes/emails"));
