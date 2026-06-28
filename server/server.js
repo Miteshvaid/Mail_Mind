@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 
-// ✅ STEP 1: CORS (sabse pehle)
+// ✅ 1. CORS (sabse pehle)
 app.use(
   cors({
     origin: true,
@@ -17,19 +17,27 @@ app.use(
   }),
 );
 
-app.options("*", cors());
+// ✅ 2. Handle OPTIONS preflight (CORS ke baad)
+app.options("*", (req, res) => {
+  res.sendStatus(200);
+});
 
-// ✅ STEP 2: BODY PARSER (CORS ke baad, routes se pehle!)
+// ✅ 3. BODY PARSER (routes se PEHLE!)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ STEP 3: DEBUG (routes se pehle)
+// ✅ 4. DEBUG (routes se pehle)
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`, req.body);
+  console.log("=== REQUEST ===");
+  console.log("Method:", req.method);
+  console.log("URL:", req.url);
+  console.log("Headers:", req.headers["content-type"]);
+  console.log("Body:", req.body);
+  console.log("===============");
   next();
 });
 
-// ✅ STEP 4: ROUTES (sabse baad mein!)
+// ✅ 5. ROUTES (sabse baad mein!)
 app.use("/auth", require("./routes/auth"));
 app.use("/api/accounts", require("./routes/accounts"));
 app.use("/api/emails", require("./routes/emails"));
