@@ -1,25 +1,53 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs"); // ✅ Direct import karo
 const User = require("../models/User");
 const GmailAccount = require("../models/GmailAccount");
-const IMAPService = require("../services/imapService");
-const authMiddleware = require("../middleware/auth"); // ✅ ADD THIS
+const authMiddleware = require("../middleware/auth");
 const router = express.Router();
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
-// ✅ REGISTER — NO auth needed
+// ✅ REGISTER — With validation
 router.post("/register", async (req, res) => {
   try {
     const { email, password, name } = req.body;
+
+    console.log(
+      "Register attempt:",
+      email,
+      "Password:",
+      password ? "YES" : "NO",
+    );
+
+    // ✅ Strict validation
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({ message: "Valid email required" });
+    }
+    if (!password || password.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
+    }
 
     const existing = await User.findOne({ email });
     if (existing)
       return res.status(400).json({ message: "Email already exists" });
 
-    const user = await User.create({ email, password, name });
+    // ✅ Hash password manually (backup)
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      email,
+      password: hashedPassword,
+      name,
+    });
+
+    console.log("User created:", user._id, "Has password:", !!user.password);
+
     const token = generateToken(user._id);
 
     res.json({
@@ -27,19 +55,49 @@ router.post("/register", async (req, res) => {
       user: { id: user._id, email: user.email, name: user.name },
     });
   } catch (error) {
+    console.error("Register error:", error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// ✅ LOGIN — NO auth needed
+// ✅ LOGIN — With validation
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    console.log("Login attempt:", email, "Password:", password ? "YES" : "NO");
 
-    const isMatch = await user.comparePassword(password);
+    // ✅ Strict validation
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log("User not found");
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    console.log(
+      "User found:",
+      user._id,
+      "Has password:",
+      !!user.password,
+      "Password length:",
+      user.password?.length,
+    );
+
+    // ✅ Check if password exists
+    if (!user.password) {
+      return res
+        .status(400)
+        .json({ message: "Account has no password. Please register again." });
+    }
+
+    // ✅ Direct bcrypt compare (without method)
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log("Password match:", isMatch);
+
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
 
@@ -49,9 +107,12 @@ router.post("/login", async (req, res) => {
       user: { id: user._id, email: user.email, name: user.name },
     });
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ message: error.message });
   }
 });
+
+// ... rest same
 
 // ✅ ADD GMAIL — AUTH REQUIRED (isliye authMiddleware lagao!)
 router.post("/add-gmail", authMiddleware, async (req, res) => {
