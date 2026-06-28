@@ -42,7 +42,12 @@ export default function Inbox({
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await api.post(`/api/emails/sync/${selectedAccount}`);
+      if (selectedAccount === "all") {
+        // Sabke accounts sync karo
+        await api.post("/api/emails/sync-all");
+      } else {
+        await api.post(`/api/emails/sync/${selectedAccount}`);
+      }
       setTimeout(fetchEmails, 3000);
     } catch (error) {
       console.error("Sync failed");

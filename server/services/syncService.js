@@ -23,18 +23,18 @@ class SyncService {
         );
 
         await Email.findOneAndUpdate(
-          { accountId, gmailId: email.id },
+          { accountId, gmailMessageId: email.id }, // ← gmailId → gmailMessageId
           {
             accountId,
             userId,
-            gmailId: email.id,
+            gmailMessageId: email.id, // ← gmailId → gmailMessageId
             subject: email.subject,
             from: email.from,
-            to: email.to,
+            to: Array.isArray(email.to) ? email.to : [email.to],
             body: email.body,
-            category,
+            category: category,
             isRead: email.isRead,
-            date: email.date,
+            receivedAt: email.date, // ← date → receivedAt (model mein yahi hai)
           },
           { upsert: true, new: true },
         );

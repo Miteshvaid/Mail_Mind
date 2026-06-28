@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require("../middleware/auth");
 const syncService = require("../services/syncService");
 const Email = require("../models/Email");
-
+const GmailAccount = require("../models/GmailAccount");
 // Get emails for an account
 router.get("/", authMiddleware, async (req, res) => {
   try {
@@ -19,13 +19,19 @@ router.get("/", authMiddleware, async (req, res) => {
 });
 
 // Sync emails manually
-router.post("/sync/:accountId", authMiddleware, async (req, res) => {
+// Sabke accounts sync karo
+router.post("/sync-all", authMiddleware, async (req, res) => {
   try {
-    const result = await syncService.syncAccount(
-      req.params.accountId,
-      req.user._id,
+    const accounts = await GmailAccount.find({
+      userId: req.user._id,
+      isActive: true,
+    });
+
+    const results = await Promise.all(
+      accounts.map((acc) => syncService.syncAccount(acc._id, req.user._id)),
     );
-    res.json(result);
+
+    res.json({ message: "All accounts synced", results });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
